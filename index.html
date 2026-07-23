@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>وام‌یار | مدیریت مشتریان و پورسانت</title>
+<meta name="theme-color" content="#0B0F1E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="وام‌یار">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.svg">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Lalezar&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+<link rel="stylesheet" href="css/style.css">
+<!-- Firebase (compat SDK - works with plain <script> tags, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<!-- SheetJS (xlsx) - client-side Excel (.xlsx) file generation, no server/backend needed -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Prominent banner shown whenever the connection to the cloud (internet/VPN) is
+     lost - separate from the small topbar sync badge, so it can't be missed. Hidden
+     by default; toggled by CloudSync in js/firebase-sync.js. -->
+<div id="connection-banner" class="connection-banner hidden" role="alert"></div>
+
+<!-- ===================== LOGIN VIEW ===================== -->
+<section id="view-login" class="view">
+  <div class="login-box">
+    <div class="brand">
+      <div class="brand-logo">وام</div>
+      <h1 class="brand-title">وام‌یار</h1>
+      <p class="muted">مدیریت مشتریان، پورسانت و خدمات دریافت وام</p>
+    </div>
+    <form id="form-login">
+      <label>نام کاربری
+        <input type="text" id="login-username" required autocomplete="username">
+      </label>
+      <label>رمز عبور
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </label>
+      <div id="login-error" class="error-text"></div>
+      <button type="submit" class="btn btn-primary btn-block">ورود</button>
+    </form>
+    <p class="muted small">اگر رمز عبور خود را فراموش کرده‌اید، با مدیر سیستم تماس بگیرید.</p>
+    <span id="online-badge" class="badge">آفلاین آماده است ✓</span>
+  </div>
+</section>
+
+<!-- ===================== APP SHELL ===================== -->
+<div id="app-shell" class="hidden">
+  <header class="topbar">
+    <div class="topbar-brand">
+      <button id="btn-menu" class="icon-btn" aria-label="منو">☰</button>
+      <div class="topbar-title" id="topbar-title">وام‌یار</div>
+    </div>
+    <div class="topbar-user">
+      <span id="sync-status" class="sync-badge off">☁️ در حال اتصال...</span>
+      <button id="btn-today-reminders" class="icon-btn reminder-bell-btn" title="یادآوری‌های امروز">
+        🔔<span id="reminder-bell-badge" class="reminder-bell-badge hidden">0</span>
+      </button>
+      <span id="current-user-name"></span>
+      <button id="btn-logout" class="icon-btn" aria-label="خروج" title="خروج">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="M18 15l4-3-4-3"/><path d="M22 12H10"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav id="sidebar" class="sidebar">
+    <button id="btn-close-sidebar" class="icon-btn sidebar-close-btn" aria-label="بستن منو" title="بستن">✕</button>
+    <div class="sidebar-user">
+      <button type="button" id="sidebar-avatar-wrap" class="avatar-wrap" title="تغییر عکس پروفایل" aria-label="تغییر عکس پروفایل">
+        <div id="sidebar-avatar" class="avatar">؟</div>
+        <span class="avatar-edit-badge">📷</span>
+      </button>
+      <input type="file" id="input-avatar" accept="image/*" hidden>
+      <div>
+        <div id="sidebar-name" class="sidebar-name"></div>
+        <div id="sidebar-role" class="sidebar-role muted"></div>
+      </div>
+    </div>
+    <ul class="nav-list" id="nav-list"></ul>
+    <details class="sidebar-tools">
+      <summary>🛠️ ابزار و پشتیبان‌گیری</summary>
+      <div class="sidebar-tools-body">
+        <button id="btn-backup" class="btn btn-ghost btn-block">📦 پشتیبان‌گیری از داده‌ها (JSON)</button>
+        <button id="btn-backup-excel" class="btn btn-ghost btn-block">📊 خروجی اکسل</button>
+        <label class="btn btn-ghost btn-block file-btn">
+          ⬆️ بازیابی/دریافت فایل پشتیبان
+          <input type="file" id="input-restore" accept="application/json" hidden>
+        </label>
+        <div id="auto-backup-status" class="muted auto-backup-status hidden"></div>
+      </div>
+    </details>
+  </nav>
+  <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
+
+  <main id="main-content" class="main-content"></main>
+
+  <!-- Native-style bottom tab bar (mobile only — hidden at desktop widths via CSS).
+       Populated by buildBottomNav() in app.js from the same permission-aware item
+       list buildNav() uses for the sidebar, so it never drifts out of sync with a
+       user's role. Always ends with a "بیشتر" tab that opens the full sidebar for
+       every item that doesn't fit in the bar. -->
+  <nav id="bottom-nav" class="bottom-nav" aria-label="پیمایش اصلی"></nav>
+</div>
+
+<!-- ===================== TEMPLATES ===================== -->
+
+<template id="tpl-dashboard-caller">
+  <div class="page">
+    <div class="page-head">
+      <h2>مشتریان جذب‌شده توسط من</h2>
+      <div class="page-head-actions">
+        <button class="btn btn-primary" id="btn-add-lead">+ ثبت مشتری تلفنی جدید</button>
+        <!-- فقط برای جذب‌کننده‌ای که دسترسی «پیگیری مراحل دریافت وام» دارد نمایش داده می‌شود
+             (در app.js حذف می‌شود اگر canProcessCustomers نداشته باشد). برای وقتی که مشتریِ
+             جذب‌شده توسط یک همکار دیگر، شخصاً توسط این کاربر در دفتر پردازش می‌شود. -->
+        <button class="btn btn-primary" id="btn-office-file-add">+ ثبت پرونده دفتر جدید</button>
+      </div>
+    </div>
+    <div class="stat-row" id="caller-stats"></div>
+    <div class="filter-row">
+      <input type="text" id="caller-search" placeholder="جستجو بر اساس نام، تلفن یا کد ملی...">
+    </div>
+    <h3 class="section-title">لیدهای ثبت‌شده (در انتظار مراجعه حضوری)</h3>
+    <div id="leads-list" class="card-list"></div>
+    <h3 class="section-title">مشتریانی که به من متصل شده‌اند</h3>
+    <div id="caller-customers-list" class="card-list"></div>
+  </div>
+</template>
+
+<template id="tpl-dashboard-processor">
+  <div class="page">
+    <div class="page-head">
+      <h2>مشتریان من</h2>
+      <button class="btn btn-primary" id="btn-add-customer">+ ثبت مشتری جدید</button>
+    </div>
+    <div class="stat-row" id="processor-stats"></div>
+    <div class="filter-row">
+      <select id="filter-stage-processor">
+        <option value="">همه مراحل</option>
+        <option value="awaiting_docs">در انتظار تکمیل مدارک</option>
+        <option value="awaiting_score">مدارک تکمیل شد - در انتظار دریافت امتیاز</option>
+        <option value="awaiting_withdrawal">امتیاز دریافت شد - در انتظار برداشت - تسویه</option>
+        <option value="completed">تکمیل شد</option>
+      </select>
+      <input type="text" id="filter-search-processor" placeholder="جستجو بر اساس نام، تلفن یا کد ملی...">
+    </div>
+    <div id="customers-list-processor" class="card-list"></div>
+  </div>
+</template>
+
+<template id="tpl-dashboard-admin">
+  <div class="page">
+    <div class="page-head">
+      <h2>نمای کلی مدیریت</h2>
+      <button class="btn btn-primary" id="btn-add-customer-admin">+ ثبت مشتری جدید</button>
+    </div>
+    <div class="stat-row" id="admin-stats"></div>
+    <div class="filter-row">
+      <select id="filter-stage-admin">
+        <option value="">همه مراحل</option>
+        <option value="awaiting_docs">در انتظار تکمیل مدارک</option>
+        <option value="awaiting_score">مدارک تکمیل شد - در انتظار دریافت امتیاز</option>
+        <option value="awaiting_withdrawal">امتیاز دریافت شد - در انتظار برداشت - تسویه</option>
+        <option value="completed">تکمیل شد</option>
+      </select>
+      <select id="filter-processor"><option value="">همه کارشناسان</option></select>
+      <select id="filter-caller"><option value="">همه جذب‌کننده‌ها</option></select>
+      <input type="text" id="filter-search-admin" placeholder="جستجو بر اساس نام، تلفن یا کد ملی...">
+      <select id="filter-sort">
+        <option value="new">جدیدترین</option>
+        <option value="old">قدیمی‌ترین</option>
+        <option value="amount-desc">بیشترین مبلغ وام</option>
+        <option value="amount-asc">کمترین مبلغ وام</option>
+      </select>
+    </div>
+    <div id="customers-count" class="muted small" style="margin-bottom:10px;"></div>
+    <div id="customers-list-admin" class="card-list"></div>
+  </div>
+</template>
+
+<template id="tpl-users">
+  <div class="page">
+    <div class="page-head">
+      <h2>مدیریت کاربران</h2>
+      <button class="btn btn-primary" id="btn-add-user">+ کاربر جدید</button>
+    </div>
+    <div class="filter-row">
+      <input type="text" id="users-search" placeholder="جستجو بر اساس نام یا نام کاربری...">
+    </div>
+    <div id="users-list" class="card-list"></div>
+  </div>
+</template>
+
+<template id="tpl-report">
+  <div class="page">
+    <div class="page-head"><h2>گزارش مالی و سود</h2></div>
+    <div class="report-controls">
+      <label>از تاریخ (شمسی)
+        <div class="jalali-date-selects" id="report-from-wrap"></div>
+      </label>
+      <label>تا تاریخ (شمسی)
+        <div class="jalali-date-selects" id="report-to-wrap"></div>
+      </label>
+      <button class="btn btn-secondary" id="btn-report-today">امروز</button>
+      <button class="btn btn-primary" id="btn-report-run">محاسبه</button>
+    </div>
+    <div id="report-result"></div>
+    <div class="section-title">پرداخت پورسانت کاربران</div>
+    <p class="muted small">این بخش مستقل از بازه‌ی تاریخ بالاست و مجموع همه‌ی پورسانت‌های تعلق‌گرفته (از ابتدا) به هر کاربر را نشان می‌دهد.</p>
+    <div id="commission-payouts"></div>
+  </div>
+</template>
+
+<template id="tpl-settings">
+  <div class="page">
+    <div class="page-head">
+      <h2>تنظیمات پورسانت</h2>
+    </div>
+    <form id="form-settings" class="modal-form settings-form">
+      <p class="muted small">
+        به‌صورت پیش‌فرض، به ازای هر مشتری که وامش تکمیل شود، نیم درصد (۰.۵٪) از مبلغ کل وام به کاربر جذب‌کننده و
+        نیم درصد (۰.۵٪) از مبلغ کل وام به کارشناس دفتر به‌عنوان پورسانت تعلق می‌گیرد. این مقادیر قابل تغییرند.
+      </p>
+      <div class="form-grid">
+        <label>درصد پورسانت جذب‌کننده مشتری (٪)
+          <input type="number" step="0.01" min="0" max="100" name="callerPercent" id="settings-caller-percent">
+        </label>
+        <label>درصد پورسانت کارشناس دفتر (٪)
+          <input type="number" step="0.01" min="0" max="100" name="processorPercent" id="settings-processor-percent">
+        </label>
+      </div>
+      <label class="check-inline">
+        <input type="checkbox" name="manualMode" id="settings-manual-mode">
+        محاسبه خودکار بر اساس درصد را برای همه غیرفعال کن و اجازه بده مبلغ پورسانت هر مشتری را خودم (مدیر) به‌صورت دستی وارد کنم
+      </label>
+
+      <fieldset class="fieldset">
+        <legend>محاسبه دستی پورسانت برای کاربران خاص</legend>
+        <p class="muted small">
+          حتی وقتی حالت بالا خاموش است (محاسبه خودکار بر اساس درصد)، می‌توانید کاربران جذب‌کننده یا کارشناسی خاصی را انتخاب کنید
+          که پورسانتشان همیشه به‌صورت دستی وارد شود (مثلاً چون قرارداد متفاوتی دارند).
+        </p>
+        <div id="settings-manual-users-list" class="card-list"></div>
+      </fieldset>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
+      </div>
+    </form>
+  </div>
+</template>
+
+<template id="tpl-templates">
+  <div class="page">
+    <div class="page-head">
+      <h2>توضیحات آماده وام‌ها</h2>
+      <button class="btn btn-primary" id="btn-add-template">+ افزودن توضیح آماده</button>
+    </div>
+    <p class="muted small" id="templates-intro"></p>
+    <div class="filter-row">
+      <input type="text" id="templates-search" placeholder="جستجو بر اساس عنوان...">
+    </div>
+    <div id="templates-list" class="card-list"></div>
+  </div>
+</template>
+
+<!-- ===================== LOAN PRODUCTS MANAGEMENT (admin) ===================== -->
+<template id="tpl-loan-products">
+  <div class="page">
+    <div class="page-head">
+      <h2>🏦 مدیریت محصولات وام</h2>
+      <button class="btn btn-primary" id="btn-add-loan-product">+ افزودن محصول وام جدید</button>
+    </div>
+    <p class="muted small">
+      هر محصول وام شامل فرمول‌های قابل‌تنظیم برای محاسبه قسط اول، اقساط خاص، سایر اقساط
+      و مبلغ قابل دریافت است. برای افزودن وام جدید نیازی به تغییر کد نیست — فقط یک محصول
+      جدید بسازید و فرمول‌ها را وارد کنید.
+    </p>
+    <div class="filter-row">
+      <input type="text" id="loan-products-search" placeholder="جستجو بر اساس نام بانک یا طرح...">
+      <select id="loan-products-filter">
+        <option value="">همه (فعال و بایگانی‌شده)</option>
+        <option value="active" selected>فقط فعال</option>
+        <option value="archived">فقط بایگانی‌شده</option>
+      </select>
+    </div>
+    <div id="loan-products-list" class="card-list"></div>
+  </div>
+</template>
+
+<!-- ===================== LOAN CALCULATOR (user) ===================== -->
+<template id="tpl-loan-calc">
+  <div class="page">
+    <div class="page-head">
+      <h2>🧮 محاسبه وام</h2>
+    </div>
+    <p class="muted small">
+      بانک و طرح وام را انتخاب کنید و سپس مبلغ وام یا مبلغ موردنیاز (قدرت خرید) را وارد نمایید.
+      سیستم تمام اقساط و مبالغ را بر اساس فرمول‌های تعریف‌شده محاسبه می‌کند.
+    </p>
+    <div class="filter-row" style="margin-bottom:8px;">
+      <select id="loan-calc-product" style="min-width:240px;">
+        <option value="">— انتخاب بانک / طرح وام —</option>
+      </select>
+    </div>
+    <div id="loan-calc-description" class="hidden" style="margin-bottom:14px;"></div>
+    <fieldset class="fieldset" id="loan-calc-input-fieldset">
+      <legend>ورودی محاسبه</legend>
+      <div class="loan-calc-input-row">
+        <label class="loan-calc-mode-opt">
+          <input type="radio" name="loan-calc-mode" value="loanAmount" checked>
+          <span>مبلغ وام را وارد می‌کنم</span>
+        </label>
+        <label class="loan-calc-mode-opt">
+          <input type="radio" name="loan-calc-mode" value="purchasableAmount">
+          <span>مبلغ موردنیاز / قدرت خرید را وارد می‌کنم</span>
+        </label>
+      </div>
+      <label id="loan-calc-amount-wrap">
+        <span id="loan-calc-amount-label">مبلغ وام (تومان)</span>
+        <input type="text" inputmode="numeric" id="loan-calc-amount" class="money-input" placeholder="مثلاً 100,000,000">
+      </label>
+      <button type="button" class="btn btn-primary" id="btn-loan-calc-run">محاسبه</button>
+    </fieldset>
+    <div id="loan-calc-result"></div>
+  </div>
+</template>
+
+<!-- ===================== LOAN PRODUCT FORM MODAL ===================== -->
+<template id="tpl-modal-loan-product">
+  <form id="form-loan-product" class="modal-form">
+    <h3 id="loan-product-form-title">محصول وام جدید</h3>
+
+    <div class="loan-form-section">
+      <h4>مشخصات</h4>
+      <div class="form-grid">
+        <label>نام بانک <input type="text" name="bankName" required placeholder="بانک مهر ایران"></label>
+        <label>نام طرح <input type="text" name="schemeName" placeholder="وام مسکن"></label>
+        <label>تعداد اقساط <input type="number" name="installmentsCount" min="1" max="360" required value="24"></label>
+      </div>
+      <label>توضیحات <textarea name="description" rows="2" placeholder="شرایط وام، مدارک لازم..."></textarea></label>
+      <label class="check-inline">
+        <input type="checkbox" name="archived"> بایگانی (در لیست کاربران نمایش داده نمی‌شود)
+      </label>
+    </div>
+
+    <div class="loan-form-section">
+      <h4>ثابت‌ها <span class="loan-hint">متغیرهای دلخواه برای استفاده در فرمول‌ها</span></h4>
+      <div id="loan-product-constants-list" class="loan-constants-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="btn-add-constant">+ ثابت جدید</button>
+    </div>
+
+    <div class="loan-form-section">
+      <h4>فرمول‌ها</h4>
+      <details class="loan-formula-guide">
+        <summary>📖 راهنمای فرمول‌نویسی</summary>
+        <div class="loan-formula-guide-body">
+          <div class="loan-formula-vars">
+            <div><code>L</code> — مبلغ وام</div>
+            <div><code>N</code> — تعداد کل اقساط</div>
+            <div><code>I</code> — شماره قسط فعلی (از ۱)</div>
+            <div><code>R</code> — مانده وام قبل از این قسط</div>
+          </div>
+          <div class="loan-formula-extras">
+            <div><code>4%</code> — معادل 4/100</div>
+            <div><code>Math_round(x)</code> — گرد کردن</div>
+            <div><code>Math_ceil(x)</code> — سقف (بالا گرد)</div>
+            <div><code>Math_floor(x)</code> — کف (پایین گرد)</div>
+          </div>
+          <div class="loan-formula-examples">
+            <b>مثال:</b>
+            <code>L * 4/100</code> یا <code>L * 4%</code> → ۴ درصد مبلغ وام<br>
+            <code>L / (N - 2)</code> → مبلغ وام تقسیم بر (کل اقساط منهای اقساط ویژه)<br>
+            <code>L - L * 40%</code> → مبلغ وام منهای ۴۰ درصد
+          </div>
+          <div class="loan-formula-constants-hint">
+            <b>ثابت‌ها:</b> می‌توانید متغیرهای دلخواه تعریف کنید (مثلاً <code>deductPercent = 40</code>) و در فرمول از نام آن استفاده کنید.
+          </div>
+        </div>
+      </details>
+      <label>قسط اول <input type="text" name="firstInstallment" class="formula-input" placeholder="L * 4%"></label>
+      <label>سایر اقساط <input type="text" name="otherInstallments" class="formula-input" placeholder="L / (N - 2)"></label>
+      <label>مبلغ قابل دریافت (قدرت خرید) <input type="text" name="purchasableAmount" class="formula-input" placeholder="L - L * 40%"></label>
+      <label>فرمول معکوس (اختیاری) <input type="text" name="loanAmountFromPurchasable" class="formula-input" placeholder="P / (1 - 40%)"></label>
+    </div>
+
+    <div class="loan-form-section">
+      <h4>اقساط خاص <span class="loan-hint">از <code>R</code> (مانده) استفاده کنید</span></h4>
+      <div id="loan-product-special-list" class="loan-special-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="btn-add-special">+ قسط خاص</button>
+    </div>
+
+    <div class="loan-form-section">
+      <h4>پیش‌نمایش</h4>
+      <label>مبلغ نمونه (تومان) <input type="text" inputmode="numeric" name="previewAmount" id="loan-product-preview-amount" class="money-input" placeholder="100,000,000"></label>
+      <div id="loan-product-preview-result" class="loan-preview-result"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="btn-delete-loan-product" style="display:none">حذف</button>
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ذخیره</button>
+    </div>
+  </form>
+</template>
+
+<template id="tpl-chat">
+  <div class="page chat-page">
+    <div class="page-head"><h2>💬 گفتگوی گروهی</h2></div>
+    <p class="muted small">این گفتگو بین همه‌ی کاربرانی که مدیر به آن‌ها دسترسی داده، به‌اشتراک گذاشته می‌شود.</p>
+    <div id="chat-messages" class="chat-messages"></div>
+    <form id="form-chat" class="chat-input-row">
+      <input type="text" id="chat-text" placeholder="پیام خود را بنویسید..." autocomplete="off" required>
+      <button type="submit" class="btn btn-primary" aria-label="ارسال" title="ارسال">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M4 12L20 4L14 20L11 13L4 12Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+  <div id="chat-admin-access" class="page hidden"></div>
+</template>
+
+<template id="tpl-pending-matches">
+  <div class="page">
+    <div class="page-head">
+      <h2>تطبیق‌های در انتظار تایید</h2>
+    </div>
+    <p class="muted small">
+      وقتی یک کارشناس جذب تلفنی، مشتری‌ای را ثبت می‌کند که شماره تماس یا کد ملی‌اش دقیقاً با یک مشتریِ ثبت‌شده توسط
+      دفتر یکسان باشد، سیستم دیگر آن را خودکار متصل نمی‌کند — کارشناس هشدار می‌بیند و مورد برای تایید نهایی اینجا
+      می‌آید. موارد زیر یا بر اساس شباهت اسمی (نه شماره تماس یا کد ملی) شناسایی شده‌اند، یا شماره تماس/کد ملی یکسانی
+      بین چند لید یا مشتری یافت شده — در هر دو حالت، برای اطمینان نیاز به تایید مدیر دارند.
+    </p>
+    <div class="filter-row">
+      <input type="text" id="pm-search" placeholder="جستجو بر اساس نام...">
+    </div>
+    <div id="pending-matches-list" class="card-list"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <h2>هشدارهای تکراری‌بودن مشتری (لید با لید)</h2>
+    </div>
+    <p class="muted small">
+      وقتی یک کارشناس جذب تلفنی، مشتری‌ای را ثبت می‌کند که شماره تماس یا کد ملی‌اش قبلاً توسط یک کارشناس جذب تلفنی
+      دیگر — یا حتی خودِ همان کارشناس — ثبت شده باشد، این هشدار همان لحظه ساخته می‌شود. این فقط برای بررسی شماست؛
+      «تکراری تایید شد» یعنی همان فرد است، «دو مورد جداگانه» یعنی هر دو ثبت معتبرند (مثلاً همان شخص برای وام جدید).
+    </p>
+    <div id="lead-conflicts-list" class="card-list"></div>
+
+    <div class="page-head" style="margin-top:24px;">
+      <h2>هشدارهای تکراری‌بودن مشتری (مشتری با مشتری)</h2>
+    </div>
+    <p class="muted small">
+      وقتی دو مشتری مستقیماً در دفتر (بدون این‌که هیچ‌کدام از یک لید تلفنی آمده باشند) با شماره تماس یا کد ملی
+      یکسان ثبت شوند، این هشدار ساخته می‌شود. این فقط برای بررسی شماست؛ «تکراری تایید شد» یعنی همان فرد است،
+      «دو مورد جداگانه» یعنی هر دو ثبت معتبرند (مثلاً همان شخص برای وام جدید).
+    </p>
+    <div id="customer-conflicts-list" class="card-list"></div>
+  </div>
+</template>
+
+<!-- Lead form modal -->
+<template id="tpl-modal-lead">
+  <form id="form-lead" class="modal-form">
+    <h3 id="lead-form-title">ثبت مشتری جذب‌شده تلفنی</h3>
+    <p class="muted small">این فرد هنوز به دفتر نیامده. وقتی به دفتر مراجعه کند و کارشناس او را ثبت کند، سیستم به‌صورت خودکار بر اساس شماره تماس یا کد ملی، این مشتری را به شما (جذب‌کننده) متصل می‌کند.</p>
+    <label>نام مشتری <input type="text" name="name" required></label>
+    <label>شماره تماس <input type="tel" name="phone" required></label>
+    <label>کد ملی (اختیاری) <input type="text" name="nationalId"></label>
+    <label>نوع درخواست مشتری
+      <select name="requestType" id="lead-request-type">
+        <option value="loan">وام</option>
+        <option value="goods">کالا</option>
+      </select>
+    </label>
+    <label id="lead-goods-type-wrap" class="hidden">نوع کالای درخواستی <input type="text" name="goodsType" placeholder="مثلاً: لوازم خانگی، موبایل، خودرو..."></label>
+    <label>یادداشت <textarea name="note" rows="2"></textarea></label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ثبت</button>
+    </div>
+  </form>
+</template>
+
+<!-- Customer form modal -->
+<template id="tpl-modal-customer">
+  <form id="form-customer" class="modal-form">
+    <h3 id="customer-form-title">ثبت مشتری جدید</h3>
+
+    <fieldset class="fieldset">
+      <legend>مشخصات مشتری</legend>
+      <div class="form-grid">
+        <label>نام و نام خانوادگی <input type="text" name="name" required></label>
+        <label>شماره تماس <input type="tel" name="phone" required placeholder="09xxxxxxxxx"></label>
+        <label>شماره تماس دوم (اختیاری) <input type="tel" name="phone2" placeholder="09xxxxxxxxx"></label>
+        <label>کد ملی <input type="text" name="nationalId" placeholder="۱۰ رقم"></label>
+        <label>شماره حساب <input type="text" name="accountNumber" placeholder="شماره حساب / شبا / کارت"></label>
+      </div>
+    </fieldset>
+
+    <div id="match-info" class="match-info hidden"></div>
+
+    <fieldset class="fieldset" id="caller-assign-fieldset">
+      <legend>جذب‌کننده تلفنی مسئول (مدیر)</legend>
+      <label>این مشتری به کدام جذب‌کننده تلفنی متصل باشد؟
+        <select name="callerId" id="customer-caller-select">
+          <option value="">— بدون جذب‌کننده —</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset class="fieldset" id="processor-assign-fieldset">
+      <legend>کارشناس دفتر مسئول (مدیر)</legend>
+      <label>این مشتری به کدام کارشناس دفتر محول شود؟
+        <select name="processorId" id="customer-processor-select">
+          <option value="">— بدون کارشناس —</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend>مشخصات وام درخواستی</legend>
+      <div class="form-grid">
+        <label>نام بانک <input type="text" name="bankName"></label>
+        <!-- صرفاً برای ثبت و نمایش است؛ در هیچ محاسبه‌ای (پورسانت، فرمول معکوس و...) استفاده نمی‌شود. -->
+        <label>حداکثر وام دریافتی بدون ضامن (تومان) <input type="text" inputmode="numeric" name="maxLoanWithoutGuarantor" class="money-input"></label>
+        <label>مبلغ وام (تومان) <input type="text" inputmode="numeric" name="loanAmount" class="money-input"></label>
+        <label>نوع دریافت
+          <select name="paymentType" id="customer-payment-type">
+            <option value="">انتخاب کنید...</option>
+            <option value="cash">وجه نقد</option>
+            <option value="goods">خرید کالا</option>
+          </select>
+        </label>
+      </div>
+      <label>تصویر اعتبارسنجی <input type="file" name="creditValidationImage" accept="image/*"></label>
+      <div id="credit-validation-preview"></div>
+    </fieldset>
+
+    <fieldset class="fieldset hidden" id="contract-fieldset">
+      <legend>مدارک</legend>
+      <label>تصویر قرارداد <input type="file" name="contractImage" accept="image/*"></label>
+      <div id="contract-preview"></div>
+    </fieldset>
+
+    <fieldset class="fieldset hidden" id="lead-purchase-fieldset">
+      <legend>خرید امتیاز (مدیر)</legend>
+      <div class="form-grid">
+        <label>خریداری‌شده از (نام و نام خانوادگی)
+          <input type="text" name="leadFromName" placeholder="مثلاً: علی رضایی">
+        </label>
+        <label>واریز به حساب
+          <input type="text" name="leadPurchaseToAccount" placeholder="شماره شبا / کارت / نام حساب">
+        </label>
+        <label>تاریخ خرید امتیاز (شمسی)
+          <div class="jalali-date-selects" id="lead-date-wrap"></div>
+        </label>
+        <label>مبلغ پرداخت‌شده بابت خرید امتیاز (تومان)
+          <input type="text" inputmode="numeric" name="leadPurchaseAmount" class="money-input">
+        </label>
+        <label>تصویر فیش واریزی بابت خرید امتیاز
+          <input type="file" name="leadPurchaseReceipt" accept="image/*">
+        </label>
+      </div>
+      <div id="lead-purchase-receipt-preview"></div>
+      <div class="followup-row" style="margin-top:14px;">
+        <label class="check-inline" style="flex:1;">
+          <input type="checkbox" name="leadPurchaseApproved" id="lead-purchase-approved">
+          خرید امتیاز را تایید می‌کنم — کارشناس دفتر می‌تواند به مرحله بعد (برداشت/تسویه) برود
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset hidden" id="withdrawal-cash-fieldset">
+      <legend>دریافتی بابت خدمات وام</legend>
+      <div class="form-grid">
+        <label>مبلغ دریافتی بابت خدمات و دریافت اعتبار (تومان) <input type="text" inputmode="numeric" name="serviceFeeAmount" class="money-input"></label>
+        <label>واریز به حساب <input type="text" name="serviceToAccount" placeholder="شماره شبا / کارت / نام حساب"></label>
+        <label>تصویر رسید برداشت <input type="file" name="receiptImage" accept="image/*"></label>
+      </div>
+      <div id="receipt-preview"></div>
+    </fieldset>
+
+    <fieldset class="fieldset hidden" id="withdrawal-goods-fieldset">
+      <legend>جزییات فروش کالا</legend>
+      <div class="form-grid">
+        <label>نام کالا <input type="text" name="goodsName"></label>
+        <label>مبلغ فروش (تومان) <input type="text" inputmode="numeric" name="goodsSaleAmount" class="money-input"></label>
+        <label>مبلغ پیش‌پرداخت (تومان) <input type="text" inputmode="numeric" name="goodsDownPayment" class="money-input"></label>
+        <label>مبلغ باقی‌مانده (تومان) <input type="text" inputmode="numeric" name="goodsRemaining" class="money-input" readonly></label>
+        <label>مبلغ وام برداشت‌شده (تومان) <input type="text" inputmode="numeric" name="goodsTotalWithdrawn" class="money-input"></label>
+        <label>تصویر رسید برداشت <input type="file" name="goodsWithdrawReceipt" accept="image/*"></label>
+      </div>
+      <div id="goods-withdraw-receipt-preview"></div>
+    </fieldset>
+
+    <fieldset class="fieldset hidden" id="goods-purchase-fieldset">
+      <legend>تسویه خرید کالا (مدیر)</legend>
+      <div class="form-grid">
+        <label>نام کالا <input type="text" name="goodsPurchaseName"></label>
+        <label>خریداری‌شده از (نام و نام خانوادگی) <input type="text" name="goodsPurchaseFromName" placeholder="مثلاً: علی رضایی"></label>
+        <label>مبلغ خرید کالا (تومان) <input type="text" inputmode="numeric" name="goodsPurchaseAmount" class="money-input"></label>
+        <label>تصویر فیش واریزی <input type="file" name="goodsPurchaseReceipt" accept="image/*"></label>
+      </div>
+      <div id="goods-purchase-receipt-preview"></div>
+    </fieldset>
+
+    <fieldset class="fieldset" id="commissions-fieldset">
+      <legend>پورسانت‌ها (فقط مدیر)</legend>
+      <div id="commission-mode-note" class="match-info"></div>
+      <div class="form-grid">
+        <label>پورسانت جذب‌کننده (تومان) <input type="text" inputmode="numeric" name="callerCommissionAmount" class="money-input"></label>
+        <label class="check-inline"><input type="checkbox" name="callerCommissionPaid"> پرداخت شده</label>
+        <label>پورسانت کارشناس دفتر (تومان) <input type="text" inputmode="numeric" name="processorCommissionAmount" class="money-input"></label>
+        <label class="check-inline"><input type="checkbox" name="processorCommissionPaid"> پرداخت شده</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset" id="stage-fieldset">
+      <legend>مرحله پرونده</legend>
+      <label>وضعیت فعلی
+        <select name="stage" id="customer-stage-select">
+          <option value="awaiting_docs">در انتظار تکمیل مدارک</option>
+          <option value="awaiting_score">مدارک تکمیل شد - در انتظار دریافت امتیاز</option>
+          <option value="awaiting_withdrawal">امتیاز دریافت شد - در انتظار برداشت - تسویه</option>
+          <option value="completed">تکمیل شد</option>
+        </select>
+      </label>
+      <p class="muted small" id="stage-help-text"></p>
+    </fieldset>
+
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="btn-delete-customer" style="display:none">حذف مشتری</button>
+      <button type="button" class="btn btn-secondary" id="btn-copy-customer" style="display:none">📋 کپی همه مشخصات</button>
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ذخیره</button>
+    </div>
+  </form>
+</template>
+
+<!-- Today's reminders popup: shown once per tab session on app load if anything is due -->
+<template id="tpl-modal-today-reminders">
+  <div class="modal-form">
+    <h3>⏰ یادآوری‌های امروز (<span id="today-reminders-count"></span>)</h3>
+    <p class="muted small" id="today-reminders-hint">برای مشاهده و ویرایش هرکدام، روی آن بزنید.</p>
+    <div id="today-reminders-list" class="card-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-primary" data-close>بستن</button>
+    </div>
+  </div>
+</template>
+
+<!-- Reminder modal (available on every customer, from any panel) -->
+<template id="tpl-modal-reminder">
+  <form id="form-reminder" class="modal-form">
+    <h3>یادآوری برای <span id="reminder-customer-name"></span></h3>
+    <label>تاریخ یادآوری (شمسی)
+      <div class="jalali-date-selects" id="reminder-date-wrap"></div>
+    </label>
+    <label>توضیحات یادآوری
+      <textarea name="note" rows="4" placeholder="مثلاً: پیگیری مدارک، تماس با مشتری و..."></textarea>
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="btn-clear-reminder" style="display:none">حذف یادآوری</button>
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ذخیره یادآوری</button>
+    </div>
+  </form>
+</template>
+
+<!-- User form modal -->
+<template id="tpl-modal-user">
+  <form id="form-user" class="modal-form">
+    <h3 id="user-form-title">کاربر جدید</h3>
+    <label>نام و نام خانوادگی <input type="text" name="name" required></label>
+    <label>نام کاربری <input type="text" name="username" required></label>
+    <label>رمز عبور <input type="password" name="password" placeholder="برای عدم تغییر، خالی بگذارید"></label>
+    <label>نقش
+      <select name="role">
+        <option value="caller">جذب‌کننده تلفنی (پاسخگویی تماس)</option>
+        <option value="processor">کارشناس خدمات دریافت وام (دفتر)</option>
+        <option value="admin">مدیر</option>
+      </select>
+    </label>
+    <label class="check-inline">
+      <input type="checkbox" name="canSeeLeadPurchase"> دسترسی به ثبت و تایید «خرید امتیاز» (مبلغ، حساب‌های واریزی و رسیدها)
+    </label>
+    <label class="check-inline">
+      <input type="checkbox" name="canReviewTakenLeads"> دسترسی به بررسی مشتریانی که «وامشان با نام شخص دیگر گرفته شده»
+    </label>
+    <label class="check-inline" id="canProcessCustomers-wrap">
+      <input type="checkbox" name="canProcessCustomers"> دسترسی به پیگیری مراحل دریافت وام مشتریان خودش (مثل کارشناس دفتر) — برای زمانی که مشتریِ جذب‌شده توسط این کاربر، شخصاً به دفتر مراجعه می‌کند
+    </label>
+    <label class="check-inline">
+      <input type="checkbox" name="active" checked> کاربر فعال است
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="btn-delete-user-permanent" style="display:none">🗑 حذف کامل کاربر</button>
+      <button type="button" class="btn btn-danger" id="btn-delete-user" style="display:none">غیرفعال‌سازی</button>
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ذخیره</button>
+    </div>
+  </form>
+</template>
+
+<!-- Message template form modal (preset loan descriptions) -->
+<template id="tpl-modal-template">
+  <form id="form-template" class="modal-form">
+    <h3 id="template-form-title">توضیح آماده جدید</h3>
+    <label>عنوان (مثلاً: وام بانک سپه) <input type="text" name="title" required></label>
+    <label>متن توضیحات <textarea name="text" rows="6" placeholder="توضیحات کامل وام، شرایط، مدارک لازم و..."></textarea></label>
+    <label>تصاویر پیوست (اختیاری - می‌توانید چند تصویر را هم‌زمان انتخاب کنید، یا چند بار اضافه کنید)
+      <input type="file" name="image" accept="image/*" multiple>
+    </label>
+    <div id="template-image-preview" class="attachment-list"></div>
+    <label>فایل‌های صوتی پیوست (اختیاری - می‌توانید چند فایل را هم‌زمان انتخاب کنید، یا چند بار اضافه کنید)
+      <input type="file" name="audio" accept="audio/*" multiple>
+    </label>
+    <div id="template-audio-preview" class="attachment-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="btn-delete-template" style="display:none">حذف</button>
+      <button type="button" class="btn btn-ghost" data-close>انصراف</button>
+      <button type="submit" class="btn btn-primary">ذخیره</button>
+    </div>
+  </form>
+</template>
+
+<!-- Send-to-customer modal -->
+<template id="tpl-modal-send-template">
+  <form id="form-send-template" class="modal-form">
+    <h3>ارسال به مشتری</h3>
+    <label>شماره تماس مشتری (واتساپ باید همراه کد کشور باشد، مثال: 98912xxxxxxx)
+      <input type="tel" name="phone" id="send-phone" list="send-phone-suggestions" placeholder="شماره تماس مشتری">
+      <datalist id="send-phone-suggestions"></datalist>
+    </label>
+    <div class="fieldset" id="send-options-box">
+      <label class="check-inline"><input type="checkbox" name="includeText" checked> ارسال متن توضیحات</label>
+      <div class="hidden" id="send-image-opt"></div>
+      <div class="hidden" id="send-audio-opt"></div>
+      <p class="muted small" id="send-attachments-hint" style="margin:2px 0 0;">📎 تصویر/فایل صوتی تیک‌خورده در همین باکس، به‌همراه متن، با دکمهٔ «اشتراک‌گذاری» زیر ارسال می‌شود.</p>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-start;flex-direction:column;align-items:stretch;gap:10px;">
+      <button type="button" class="btn btn-primary btn-block" id="btn-share-native">📤 اشتراک‌گذاری (تلگرام، واتساپ، روبیکا، بله، ایتا و...)</button>
+      <div class="send-quicklinks">
+        <button type="button" class="btn btn-secondary" id="btn-send-whatsapp">واتساپ (فقط متن)</button>
+        <button type="button" class="btn btn-secondary" id="btn-send-telegram">تلگرام (فقط متن)</button>
+        <button type="button" class="btn btn-secondary" id="btn-copy-text">کپی متن</button>
+      </div>
+      <div id="send-telegram-status" class="hidden" style="background:var(--warn-tint);color:var(--warn-dark);border:1px solid rgba(var(--warn-rgb),.3);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.8;"></div>
+      <div id="send-file-fallback"></div>
+      <p class="muted small">
+        به‌دلیل محدودیت‌های امنیتی مرورگرها و نبود API عمومی برای روبیکا/بله/ایتا، مطمئن‌ترین راه ارسال همزمان متن + تصویر + صوت، دکمه «اشتراک‌گذاری» بالاست که در گوشی، لیست اپلیکیشن‌های نصب‌شده (از جمله همین چهار مورد) را نشان می‌دهد.
+        دکمه «واتساپ» متن را خودش داخل چت پر می‌کند. دکمه «تلگرام» این‌طور نیست - تلگرام هیچ راهی برای پر کردن خودکار پیام ندارد، پس متن را در کلیپ‌بورد کپی می‌کنیم و باید خودتان با Paste آن را داخل چت بگذارید؛ ضمناً چت درستی هم فقط وقتی باز می‌شود که آن شماره از قبل برای تلگرام شما قابل‌شناسایی باشد.
+        اگر دکمه اشتراک‌گذاری در دستگاه شما در دسترس نبود، از دکمه‌های دانلود فایل و سپس پیوست دستی در اپلیکیشن مقصد استفاده کنید.
+      </p>
+    </div>
+  </form>
+</template>
+
+<div id="modal-root" class="modal-root hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<div id="toast-root" class="toast-root"></div>
+
+<script src="js/jalali.js"></script>
+<script src="js/formula-engine.js"></script>
+<script src="js/db.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-sync.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

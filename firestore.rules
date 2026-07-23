@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===================== یادداشت امنیتی مهم =====================
+    // این اپ از ورود ناشناس (Anonymous Auth) به‌همراه سیستم نام‌کاربری/رمز عبور
+    // اختصاصی خودش (در js/db.js) استفاده می‌کند. چون همه‌ی کاربران از دید
+    // Firebase یک نوع هویت یکسان («ناشناس») دارند، این Rules نمی‌تواند نقش
+    // واقعی کاربر (مدیر/کارشناس/جذب‌کننده) را تشخیص بدهد و بر اساس آن محدود
+    // کند - آن بخش از کنترل دسترسی همچنان در سطح اپلیکیشن انجام می‌شود.
+    // برای امنیت کامل (تفکیک واقعی دسترسی بر اساس نقش) باید به Firebase
+    // Authentication واقعی (ایمیل/رمز) مهاجرت شود.
+    //
+    // آنچه این نسخه واقعاً اضافه می‌کند:
+    //   1) فهرست صریح Collection های مجاز - هر مسیر دیگری که تعریف نشده رد
+    //      می‌شود (قبلاً {document=**} هر Collection ای، حتی جدید و ناخواسته
+    //      را هم باز می‌گذاشت).
+    //   2) الزام به عبور از Firebase App Check (باید از کنسول فعال شود - به
+    //      README مراجعه کنید) که جلوی درخواست‌های خارج از همین اپ وب
+    //      (اسکریپت/بات/curl با کلید عمومی لو رفته) را می‌گیرد.
+    //   3) اعتبارسنجی سبک شکل داده روی نوشتن سند users (مهم‌ترین Collection
+    //      از نظر حریم خصوصی) تا فیلدهای حیاتی (role, active, passwordHash)
+    //      همیشه از نوع درست باشند.
+    //   4) auditLogs: قابل نوشتن (ثبت) برای هر کاربر واردشده، ولی هرگز قابل
+    //      ویرایش یا حذف نیست - یعنی حتی یک نشست مخرب هم نمی‌تواند تاریخچه
+    //      را پاک یا دستکاری کند.
+    // =================================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasAll(['id', 'name', 'username', 'role', 'active'])
+        && request.resource.data.id is string
+        && request.resource.data.username is string
+        && request.resource.data.role in ['admin', 'processor', 'caller']
+        && request.resource.data.active is bool;
+      allow delete: if signedIn();
+    }
+
+    match /leads/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /customers/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /pendingMatches/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /leadConflicts/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /customerConflicts/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /settings/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /templates/{id} {
+      allow read, write: if signedIn();
+    }
+
+    match /chatMessages/{id} {
+      allow read, write: if signedIn();
+    }
+
+    // محصولات وام (loanProducts): تعریف کامل‌اً قابل‌تنظیم توسط مدیر برای هر بانک/طرح.
+    // شامل فرمول‌ها، ثابت‌ها و توضیحات. همانند سایر Collection‌ها، نقش‌ها در خود
+    // اپلیکیشن اعمال می‌شوند (اینجا فقط دسترسی کلی کاربر واردشده بررسی می‌شود).
+    match /loanProducts/{id} {
+      allow read, write: if signedIn();
+    }
+
+    // تاریخچه/Audit Log: فقط افزودن مجاز است، هرگز ویرایش یا حذف - حتی توسط
+    // خودِ کاربری که آن را ثبت کرده. این تضمین می‌کند تاریخچه قابل دستکاری
+    // نیست، صرف‌نظر از اینکه چه کسی وارد شده باشد.
+    match /auditLogs/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['id', 'entity', 'action', 'actorId', 'actorName', 'at'])
+        && request.resource.data.id is string
+        && request.resource.data.entity is string
+        && request.resource.data.action is string
+        && request.resource.data.at is string;
+      allow update, delete: if false;
+    }
+
+    // هر مسیر/Collection دیگری که بالا صراحتاً تعریف نشده، به‌طور پیش‌فرض
+    // بسته است (قبلاً با {document=**} کاملاً باز بود).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

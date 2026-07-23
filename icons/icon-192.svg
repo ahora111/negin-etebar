@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1D2E6B"/>
+      <stop offset="0.55" stop-color="#131C39"/>
+      <stop offset="1" stop-color="#080B16"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E8C46B"/>
+      <stop offset="1" stop-color="#B8892E"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.3" cy="0.22" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="42" fill="url(#tile)"/>
+  <rect width="192" height="192" rx="42" fill="url(#sheen)"/>
+  <rect x="3" y="3" width="186" height="186" rx="39" fill="none" stroke="#E8C46B" stroke-opacity="0.35" stroke-width="1.5"/>
+
+  <circle cx="96" cy="96" r="52" fill="url(#coin)"/>
+  <circle cx="96" cy="96" r="52" fill="none" stroke="#7A5A1E" stroke-opacity="0.35" stroke-width="1.5"/>
+  <circle cx="96" cy="96" r="44" fill="none" stroke="#FFF6E0" stroke-opacity="0.45" stroke-width="1.5"/>
+
+  <g fill="#12183A">
+    <rect x="68" y="100" width="12" height="24" rx="4"/>
+    <rect x="90" y="88" width="12" height="36" rx="4"/>
+    <rect x="112" y="76" width="12" height="48" rx="4"/>
+  </g>
+</svg>

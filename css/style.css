@@ -1,0 +1,985 @@
+/* =========================================================================
+   وام‌یار — Design System v2 ("Lapis & Gold")
+   -------------------------------------------------------------------------
+   Full visual redesign. Every class/id the JS relies on (classList.add/
+   remove/toggle, className=, querySelector, and the class="" strings baked
+   into js/app.js template literals) is preserved 1:1 — only the look
+   changes. See the audit at the top of this project's redesign notes if
+   you add a new dynamic class in JS: it needs a matching rule here.
+
+   Direction: a deep Persian "lapis" navy/indigo for structure and trust,
+   warm gold reserved specifically for money/value and highlighted state
+   (stat accents, the profit figure, the purchasable-amount cell), and a
+   calm, light workspace for the actual data entry — this is a daily
+   financial tool, not a marketing page, so the content area stays quiet
+   and legible while the chrome (topbar/sidebar/login) carries the brand.
+   Status colors (success/warn/danger/info) stay close to conventional
+   values on purpose — they match the hard-coded Chart.js colors in
+   app.js (which this redesign intentionally does not touch) and they're
+   load-bearing for fast visual scanning of a long customer/lead list.
+   ========================================================================= */
+
+:root{
+  /* ---- brand: deep lapis / indigo ---- */
+  --ink:#0B0F1E;
+  --navy-950:#080B16;
+  --navy-900:#0D1226;
+  --navy-850:#11172E;
+  --navy-800:#161D3C;
+  --navy-700:#1D2650;
+  --navy-600:#263372;
+
+  --brand:#3B5BDB;
+  --brand-600:#2C46B8;
+  --brand-700:#233897;
+  --brand-400:#7C93EE;
+  --brand-100:#E8ECFD;
+  --brand-rgb:59,91,219;
+
+  /* ---- accent: warm gold — reserved for money / value / highlight ---- */
+  --gold:#C9992F;
+  --gold-light:#E8C46B;
+  --gold-dark:#8F6A22;
+  --gold-rgb:201,153,47;
+
+  /* ---- status (kept close to conventional + to the Chart.js literals) ---- */
+  --success:#10B981;
+  --success-dark:#059669;
+  --success-tint:#E4FAF1;
+  --success-rgb:16,185,129;
+
+  --warn:#F59E0B;
+  --warn-dark:#92400E;
+  --warn-tint:#FEF3C7;
+  --warn-rgb:245,158,11;
+
+  --danger:#DC2626;
+  --danger-dark:#991B1B;
+  --danger-tint:#FEE2E2;
+  --danger-rgb:220,38,38;
+
+  --info:#0EA5E9;
+  --info-dark:#0369A1;
+  --info-tint:#E0F6FE;
+  --info-rgb:14,165,233;
+
+  --violet:#8B5CF6;
+  --violet-dark:#6D28D9;
+  --violet-tint:#F1EBFE;
+  --violet-rgb:139,92,246;
+
+  /* ---- workspace surfaces (light) ---- */
+  --bg:#F1F4FA;
+  --surface:#FFFFFF;
+  --surface-2:#F6F8FC;
+  --surface-3:#ECF0F8;
+  --border:#E1E6F1;
+  --border-strong:#CBD3E6;
+  --text:#10162B;
+  --muted:#5B6478;
+
+  /* ---- dark chrome (topbar / sidebar / login) ---- */
+  --chrome-text:#F5F7FF;
+  --chrome-muted:#9FAAC9;
+  --chrome-border:rgba(255,255,255,.10);
+
+  /* ---- shape ---- */
+  --radius-xs:9px;
+  --radius-sm:12px;
+  --radius:18px;
+  --radius-lg:24px;
+  --radius-xl:30px;
+
+  /* ---- elevation (navy-tinted, not flat black) ---- */
+  --shadow-xs:0 1px 2px rgba(13,18,42,.05);
+  --shadow-sm:0 3px 11px -3px rgba(13,18,42,.11);
+  --shadow-md:0 16px 32px -12px rgba(13,18,42,.18);
+  --shadow-lg:0 32px 68px -18px rgba(9,13,32,.32);
+  --shadow-brand:0 14px 28px -8px rgba(var(--brand-rgb),.4);
+  --shadow-gold:0 12px 24px -8px rgba(var(--gold-rgb),.38);
+
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --bottom-nav-h:58px;
+
+  --ease:cubic-bezier(.22,.9,.32,1);
+  font-family:"Vazirmatn","Tahoma","Segoe UI",Arial,sans-serif;
+}
+
+*{box-sizing:border-box;}
+*::selection{background:var(--brand-100);color:var(--brand-700);}
+
+html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text);font-family:inherit;overflow-x:hidden;}
+body{
+  background:
+    radial-gradient(1000px 480px at 104% -8%, rgba(var(--brand-rgb),.07), transparent 60%),
+    radial-gradient(760px 460px at -8% 6%, rgba(var(--gold-rgb),.06), transparent 55%),
+    var(--bg);
+  -webkit-tap-highlight-color:transparent;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0 0 8px;letter-spacing:-.01em;color:var(--text);text-wrap:balance;}
+h2{font-size:20px;font-weight:800;}
+p{margin:6px 0;line-height:1.7;}
+a{color:inherit;}
+.hidden{display:none !important;}
+.muted{color:var(--muted);}
+.small{font-size:12.5px;}
+
+/* ---- scrollbars ---- */
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent;}
+*::-webkit-scrollbar{width:8px;height:8px;}
+*::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:20px;}
+*::-webkit-scrollbar-thumb:hover{background:var(--brand-400);}
+*::-webkit-scrollbar-track{background:transparent;}
+
+/* ============================= Form basics ============================= */
+input,select,textarea,button{font-family:inherit;font-size:14.5px;}
+input,select,textarea{
+  width:100%;padding:11px 14px;background:var(--surface-2);border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+input::placeholder,textarea::placeholder{color:#9BA3BC;}
+input:hover,select:hover,textarea:hover{border-color:var(--border-strong);}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--brand);background:var(--surface);
+  box-shadow:0 0 0 4px rgba(var(--brand-rgb),.13);
+}
+input[readonly]{opacity:.7;}
+select{cursor:pointer;}
+textarea{resize:vertical;min-height:70px;}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);margin-bottom:12px;font-weight:600;}
+.check-inline{flex-direction:row;align-items:center;gap:9px;font-weight:500;}
+.check-inline input{width:auto;accent-color:var(--brand);}
+input[type="checkbox"]{width:18px;height:18px;accent-color:var(--brand);cursor:pointer;flex:none;}
+input[type="radio"]{accent-color:var(--brand);}
+input[type="file"]{padding:9px 12px;font-size:13px;cursor:pointer;}
+
+/* ================================ Buttons ================================ */
+.btn{
+  padding:11px 18px;border-radius:var(--radius-sm);border:1.5px solid var(--border);
+  background:var(--surface);color:var(--text);cursor:pointer;font-weight:700;font-size:14px;
+  transition:transform .12s var(--ease), box-shadow .15s ease, background .15s ease, border-color .15s ease;
+  box-shadow:var(--shadow-xs);
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm);transform:translateY(-1px);}
+.btn:active{transform:translateY(0) scale(.97);}
+.btn-primary{
+  background:linear-gradient(135deg,var(--brand),var(--brand-700));
+  border-color:transparent;color:#fff;box-shadow:var(--shadow-brand);
+}
+.btn-primary:hover{filter:brightness(1.07);box-shadow:0 16px 32px -8px rgba(var(--brand-rgb),.5);}
+.btn-secondary{background:linear-gradient(135deg,#25BEF2,var(--info-dark));border-color:transparent;color:#fff;box-shadow:0 10px 24px -6px rgba(var(--info-rgb),.4);}
+.btn-danger{background:var(--surface);border-color:rgba(var(--danger-rgb),.35);color:var(--danger);}
+.btn-danger:hover{background:rgba(var(--danger-rgb),.06);border-color:var(--danger);}
+.btn-ghost{background:transparent;border-color:transparent;box-shadow:none;color:var(--muted);}
+.btn-ghost:hover{background:var(--surface-3);color:var(--text);transform:none;}
+.btn-block{width:100%;}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:9px;}
+.btn-reminder,.btn-lead-reminder{min-height:40px;display:inline-flex;align-items:center;}
+.icon-btn{
+  background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.09);color:var(--chrome-text);font-size:18px;cursor:pointer;
+  padding:8px;border-radius:12px;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  min-width:42px;min-height:42px;transition:background .15s ease, transform .12s var(--ease), border-color .15s ease;
+}
+.icon-btn:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.18);}
+.icon-btn:active{transform:scale(.92);}
+.file-btn{position:relative;text-align:center;cursor:pointer;}
+
+/* =========================================================================
+   Login — the one "hero" screen: rich lapis gradient + faint geometric
+   lattice (a quiet nod to Persian tile-work) behind a frosted glass card.
+   ========================================================================= */
+#view-login{
+  min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:22px;
+  position:relative;overflow:hidden;isolation:isolate;
+  background:
+    radial-gradient(1100px 640px at 12% -12%, rgba(var(--brand-rgb),.38), transparent 60%),
+    radial-gradient(900px 620px at 108% 112%, rgba(var(--gold-rgb),.20), transparent 55%),
+    linear-gradient(160deg, var(--navy-950) 0%, var(--navy-900) 45%, var(--navy-700) 100%);
+}
+#view-login::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.7;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M32 2 L62 32 L32 62 L2 32 Z' fill='none' stroke='%23ffffff' stroke-opacity='0.055' stroke-width='1'/%3E%3Ccircle cx='32' cy='32' r='1.4' fill='%23ffffff' fill-opacity='0.08'/%3E%3C/svg%3E");
+}
+.login-box{
+  position:relative;z-index:1;overflow:hidden;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+  padding:36px 28px;border-radius:var(--radius-xl);width:100%;max-width:404px;
+  border:1px solid rgba(255,255,255,.6);
+  box-shadow:var(--shadow-lg), 0 0 0 1px rgba(255,255,255,.35) inset;
+  animation:login-rise .5s var(--ease);
+}
+.login-box::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--brand),var(--gold));
+}
+@keyframes login-rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.brand{text-align:center;margin-bottom:22px;}
+.brand-logo{
+  width:70px;height:70px;border-radius:22px;background:linear-gradient(135deg,var(--navy-600),var(--navy-950));
+  color:#fff;font-weight:800;box-shadow:var(--shadow-lg);position:relative;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;
+  border:1px solid rgba(232,196,107,.4);
+  animation:logo-glow 4s ease-in-out infinite;
+}
+.brand-logo::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;
+  background:radial-gradient(circle at 30% 22%, rgba(255,255,255,.22), transparent 60%);
+}
+@keyframes logo-glow{
+  0%,100%{box-shadow:var(--shadow-lg), 0 0 0 0 rgba(var(--gold-rgb),.25);}
+  50%{box-shadow:var(--shadow-lg), 0 0 0 8px rgba(var(--gold-rgb),0);}
+}
+.brand-title{font-family:"Lalezar","Vazirmatn","Tahoma",sans-serif;font-weight:400;font-size:40px;color:var(--ink);letter-spacing:.01em;margin:4px 0 2px;}
+.error-text{color:var(--danger);font-size:13px;min-height:18px;font-weight:700;}
+.error-text:not(:empty)::before{content:"⚠ ";}
+.badge{display:inline-block;margin-top:16px;font-size:12px;color:var(--success-dark);background:var(--success-tint);
+  padding:6px 14px;border-radius:20px;font-weight:700;border:1px solid rgba(var(--success-rgb),.25);}
+
+/* ============================== App shell =============================== */
+.topbar{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(155deg,var(--navy-900),var(--navy-800) 70%);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--chrome-border);padding:calc(11px + var(--safe-t)) 16px 11px;
+  box-shadow:0 8px 24px -14px rgba(0,0,0,.5);
+}
+.topbar-brand{display:flex;align-items:center;gap:11px;}
+.topbar-title{
+  font-weight:800;font-size:21px;letter-spacing:0;
+  background:linear-gradient(90deg,#ffffff,var(--gold-light));-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.topbar-user{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--chrome-muted);font-weight:600;min-width:0;}
+#current-user-name{display:none;color:var(--chrome-text);}
+@media (min-width:480px){ #current-user-name{display:inline;} }
+
+.sidebar{
+  position:fixed;top:0;right:0;width:280px;max-width:82vw;
+  /* Stops above the mobile bottom tab bar (instead of covering it) so the bar
+     stays fully visible and un-obscured while the menu is open - the nav list
+     right above the tools accordion still scrolls internally within this
+     shorter height, so every item (including "🛠️ ابزار و پشتیبان‌گیری")
+     stays reachable. Desktop (>=1080px, docked sidebar, no bottom bar) resets
+     this back to a full-height bottom:0 below. */
+  bottom:calc(var(--bottom-nav-h) + var(--safe-b));
+  background:linear-gradient(175deg,var(--navy-900) 0%,var(--navy-950) 100%);
+  border-left:1px solid var(--chrome-border);transform:translateX(100%);transition:transform .3s var(--ease);
+  z-index:45;display:flex;flex-direction:column;padding:calc(64px + var(--safe-t)) 16px 18px;
+  box-shadow:-30px 0 70px -20px rgba(0,0,0,.5);
+}
+.sidebar.open{transform:translateX(0);}
+.sidebar-close-btn{position:absolute;top:calc(14px + var(--safe-t));left:14px;}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(6,9,20,.55);backdrop-filter:blur(2px);z-index:40;}
+.sidebar-user{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--chrome-border);}
+.avatar-wrap{position:relative;flex:none;padding:0;border:none;background:transparent;cursor:pointer;border-radius:15px;}
+.avatar-wrap:focus-visible{outline:2px solid var(--gold-light);outline-offset:2px;}
+.avatar-edit-badge{
+  position:absolute;left:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;
+  background:var(--navy-900);border:2px solid var(--navy-950);display:flex;align-items:center;justify-content:center;
+  font-size:10px;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.4);
+}
+.avatar{width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));color:var(--navy-950);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;box-shadow:var(--shadow-gold);flex:none;}
+.sidebar-name{font-weight:800;font-size:15px;color:var(--chrome-text);}
+.sidebar-role{font-size:12px;font-weight:600;color:var(--chrome-muted) !important;}
+.nav-list{list-style:none;padding:0;margin:0;flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;}
+.nav-list li a{
+  display:flex;align-items:center;padding:12px 14px;border-radius:13px;color:var(--chrome-muted);text-decoration:none;cursor:pointer;
+  font-weight:600;font-size:14px;transition:background .15s ease, color .15s ease;border:1px solid transparent;position:relative;
+}
+.nav-list li a:hover{background:rgba(255,255,255,.06);color:var(--chrome-text);}
+.nav-list li a.active{
+  background:linear-gradient(90deg, rgba(var(--gold-rgb),.18), rgba(var(--gold-rgb),.05));
+  color:var(--gold-light);font-weight:800;border-color:rgba(var(--gold-rgb),.25);
+}
+.nav-list li a.active::after{
+  content:"";position:absolute;top:9px;bottom:9px;right:-16px;width:3px;border-radius:99px;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold));
+}
+/* Backup/export/restore tools: collapsed by default inside a native <details>
+   disclosure, instead of a permanently-open footer block. That fixed footer used
+   to eat a chunk of the sidebar's height every single time, forcing the actual
+   nav routes above it into their own cramped scroll area - annoying since these
+   are occasional utility actions, not routes people need visible constantly. */
+.sidebar-tools{flex:none;padding-top:10px;border-top:1px solid var(--chrome-border);}
+.sidebar-tools summary{
+  list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  padding:9px 10px;border-radius:9px;font-size:12px;font-weight:700;color:var(--chrome-muted);
+  transition:background .15s ease, color .15s ease;
+}
+.sidebar-tools summary::-webkit-details-marker{display:none;}
+.sidebar-tools summary::after{content:"⌄";font-size:13px;transition:transform .2s var(--ease);}
+.sidebar-tools[open] summary::after{transform:rotate(180deg);}
+.sidebar-tools summary:hover{background:rgba(255,255,255,.07);color:var(--chrome-text);}
+.sidebar-tools-body{display:flex;flex-direction:column;gap:6px;padding-top:8px;}
+.sidebar-tools-body .btn-ghost{color:var(--chrome-muted);}
+.sidebar-tools-body .btn-ghost:hover{background:rgba(255,255,255,.07);color:var(--chrome-text);}
+.sidebar-tools-body .btn{padding:6px 10px;font-size:11px;border-radius:9px;min-height:0;gap:4px;}
+.auto-backup-status{font-size:12px;line-height:1.6;text-align:center;padding-top:4px;color:var(--chrome-muted);}
+
+/* ============================ Bottom tab bar ============================
+   Native-app navigation pattern for phones: thumb-reachable, always visible,
+   no hamburger round-trip for the routes people hit constantly. Desktop
+   keeps the docked sidebar (see the >=1080px block below) and this is
+   hidden there entirely. */
+.bottom-nav{
+  display:flex;position:fixed;left:0;right:0;bottom:0;z-index:46;
+  background:linear-gradient(180deg,rgba(13,18,42,.98),var(--navy-950) 40%);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+  border-top:1px solid var(--chrome-border);
+  padding:6px 4px calc(6px + var(--safe-b));
+  box-shadow:0 -8px 24px -14px rgba(0,0,0,.5);
+}
+.bottom-nav-item{
+  position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:transparent;border:none;color:var(--chrome-muted);cursor:pointer;
+  padding:6px 2px;border-radius:12px;min-height:46px;
+  font-family:inherit;transition:color .15s ease, transform .12s var(--ease);
+  -webkit-tap-highlight-color:transparent;
+}
+.bottom-nav-item:active{transform:scale(.93);}
+.bottom-nav-icon{font-size:19px;line-height:1;}
+.bottom-nav-label{font-size:10.5px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.bottom-nav-item.active{color:var(--gold-light);}
+.bottom-nav-item.active .bottom-nav-icon{transform:translateY(-1px);}
+.bottom-nav-item.active::before{
+  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:22px;height:3px;border-radius:99px;
+  background:linear-gradient(90deg,var(--gold-light),var(--gold));
+}
+/* Unread-message dot: sits on the tab's icon (chat tab, or "بیشتر" if chat is tucked
+   behind it) so a new group-chat message is never invisible from any screen. */
+.bottom-nav-item.has-unread .bottom-nav-icon{position:relative;}
+.bottom-nav-item.has-unread .bottom-nav-icon::after{
+  content:"";position:absolute;top:-3px;inset-inline-end:-7px;width:9px;height:9px;border-radius:50%;
+  background:var(--danger);box-shadow:0 0 0 2px var(--navy-950);
+  animation:bottom-nav-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes bottom-nav-dot-pulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.2);}
+}
+
+.main-content{max-width:960px;margin:0 auto;padding:20px 16px calc(28px + var(--safe-b));}
+.page-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px;}
+/* Groups the caller dashboard's two "add" buttons (lead / office file) so they wrap
+   together as one unit instead of fighting the space-between rule above. */
+.page-head-actions{display:flex;flex-wrap:wrap;gap:10px;}
+.section-title{margin-top:28px;color:var(--muted);font-size:12.5px;font-weight:800;text-transform:none;letter-spacing:.02em;
+  display:flex;align-items:center;gap:8px;}
+.section-title::before{content:"";width:4px;height:13px;border-radius:3px;background:linear-gradient(180deg,var(--brand),var(--gold));display:inline-block;}
+
+/* ================================ Stats ================================= */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px;min-width:0;
+  overflow:hidden;container-type:inline-size;box-shadow:var(--shadow-sm);position:relative;
+}
+.stat-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--brand),var(--gold));opacity:.95;}
+.stat-card .num{font-size:clamp(15px,7cqw,23px);font-weight:800;line-height:1.35;overflow-wrap:normal;word-break:keep-all;white-space:normal;margin-top:4px;
+  font-variant-numeric:tabular-nums;color:var(--ink);}
+.stat-card .num .money-num{white-space:nowrap;display:inline-block;}
+.stat-card .label{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;}
+
+/* =============================== Filters ================================ */
+.filter-row{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px;}
+.filter-row > *{flex:1;min-width:140px;}
+
+/* ================================ Cards ================================= */
+.card-list{display:flex;flex-direction:column;gap:11px;}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;
+  box-shadow:var(--shadow-sm);transition:transform .16s var(--ease), box-shadow .16s ease, border-color .16s ease;
+}
+.card:hover{border-color:rgba(var(--brand-rgb),.35);box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.card:active{transform:translateY(0) scale(.995);}
+/* Used for cards that only display info (e.g. the caller's connected-customers list,
+   where the office workflow/stage timeline is view-only) - no pointer cursor, no
+   hover-lift, since clicking the card intentionally does nothing there. */
+.card.card-static{cursor:default;}
+.card.card-static:hover{border-color:var(--border);box-shadow:var(--shadow-sm);transform:none;}
+.card.card-static:active{transform:none;}
+.card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.card-title{font-weight:800;font-size:15px;color:var(--ink);}
+.card-sub{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500;}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.chip{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--muted);font-weight:700;background:var(--surface-2);}
+.chip.stage-new{color:var(--info-dark);border-color:rgba(var(--info-rgb),.3);background:var(--info-tint);}
+.chip.stage-awaiting_docs{color:var(--warn-dark);border-color:rgba(var(--warn-rgb),.3);background:var(--warn-tint);}
+.chip.stage-awaiting_score{color:var(--violet-dark);border-color:rgba(var(--violet-rgb),.3);background:var(--violet-tint);}
+.chip.stage-awaiting_withdrawal{color:var(--warn-dark);border-color:rgba(var(--warn-rgb),.3);background:var(--warn-tint);}
+.chip.stage-completed{color:var(--success-dark);border-color:rgba(var(--success-rgb),.3);background:var(--success-tint);}
+/* used on the Pending Matches page for the "تطابق دقیق - چند مورد" badge - name kept as-is
+   from before the customer-stage workflow was refactored, but it isn't a file stage. */
+.chip.stage-following{color:var(--warn-dark);border-color:rgba(var(--warn-rgb),.3);background:var(--warn-tint);}
+.empty-state{color:var(--muted);text-align:center;padding:38px 16px;border:1.5px dashed var(--border-strong);border-radius:var(--radius);background:var(--surface-2);font-weight:600;}
+
+.fieldset{border:1.5px solid var(--border);border-radius:16px;padding:14px;margin:16px 0;background:var(--surface-2);}
+.fieldset legend{padding:0 10px;color:var(--brand-700);font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px;}
+.fieldset legend::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand);flex:none;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 14px;}
+.match-info{background:var(--success-tint);border:1px solid rgba(var(--success-rgb),.3);color:var(--success-dark);
+  padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;margin:10px 0;font-weight:600;}
+
+.report-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:18px;}
+.report-controls label{min-width:150px;}
+
+/* ================================ Modal ================================= */
+.modal-root{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;}
+.modal-backdrop{position:absolute;inset:0;background:rgba(8,11,22,.55);backdrop-filter:blur(3px);}
+.modal-box{
+  position:relative;background:var(--surface);width:100%;max-width:620px;max-height:92vh;max-height:92dvh;overflow:auto;
+  border-radius:26px 26px 0 0;padding:22px 20px calc(20px + var(--safe-b));border:1px solid var(--border);
+  box-shadow:0 -24px 64px -16px rgba(9,13,32,.35);
+  animation:sheet-in .25s var(--ease);
+}
+.modal-box::before{
+  content:"";position:sticky;display:block;top:-4px;width:44px;height:5px;border-radius:20px;background:var(--border-strong);
+  margin:-8px auto 14px;
+}
+@keyframes sheet-in{from{transform:translateY(26px);opacity:.3;}to{transform:translateY(0);opacity:1;}}
+@media (min-width:640px){
+  .modal-root{align-items:center;}
+  .modal-box{border-radius:var(--radius-lg);}
+  .modal-box::before{display:none;}
+}
+.modal-form h3{margin-bottom:8px;font-size:18px;color:var(--ink);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap;}
+#receipt-preview img{max-width:160px;border-radius:12px;margin-top:8px;border:1px solid var(--border);}
+
+.toast-root{position:fixed;bottom:calc(16px + var(--safe-b));left:16px;right:16px;z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:var(--surface);border:1px solid var(--border);padding:12px 18px 12px 16px;border-radius:14px;font-size:13.5px;font-weight:600;
+  box-shadow:var(--shadow-lg);border-right:4px solid var(--border-strong);animation:toast-in .22s var(--ease);}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.toast.success{border-color:rgba(var(--success-rgb),.3);border-right-color:var(--success);color:var(--success-dark);background:var(--success-tint);}
+.toast.error{border-color:rgba(var(--danger-rgb),.3);border-right-color:var(--danger);color:var(--danger-dark);background:var(--danger-tint);}
+.toast.warn{border-color:rgba(var(--warn-rgb),.3);border-right-color:var(--warn);color:var(--warn-dark);background:var(--warn-tint);}
+
+/* ---- Connection-lost banner (internet/VPN down) ---- */
+.connection-banner{
+  position:relative;z-index:90;
+  background:linear-gradient(90deg,var(--danger-dark),var(--danger));color:#fff;
+  font-size:13px;font-weight:700;text-align:center;
+  padding:9px 14px;box-shadow:0 2px 12px rgba(0,0,0,.18);
+}
+.connection-banner:not(:empty)::before{content:"⚠ ";}
+
+.profit-box{background:linear-gradient(135deg,var(--surface),#FBF3E1 180%);border:1px solid rgba(var(--gold-rgb),.35);border-radius:var(--radius);padding:20px;margin-top:16px;min-width:0;overflow:hidden;box-shadow:var(--shadow-sm);position:relative;}
+.profit-box::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--gold),var(--brand));}
+.profit-box .amount{font-size:30px;font-weight:800;color:var(--gold-dark);overflow-wrap:break-word;word-break:break-word;font-variant-numeric:tabular-nums;}
+
+/* ---- Incomplete profit-data warning ---- */
+.warning-box{background:var(--warn-tint);border:1px solid rgba(var(--warn-rgb),.4);color:var(--warn-dark);padding:12px 14px;border-radius:var(--radius-sm);font-size:13px;margin:10px 0;font-weight:600;}
+.warning-box ul{margin:6px 0 0;padding-inline-start:18px;}
+.warning-box a{color:var(--warn-dark);text-decoration:underline;cursor:pointer;}
+
+/* ---- Per-user commission payout tracker ---- */
+.payout-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;min-width:0;overflow:hidden;box-shadow:var(--shadow-sm);}
+.payout-name{font-weight:800;color:var(--ink);}
+.payout-figures{display:flex;flex-wrap:wrap;gap:18px;margin-top:8px;font-size:12px;color:var(--muted);}
+.payout-figures>div{min-width:0;}
+.payout-figures b{display:block;font-size:16px;color:var(--text);margin-top:2px;overflow-wrap:break-word;word-break:break-word;font-variant-numeric:tabular-nums;}
+.payout-figures .remaining b{color:var(--warn-dark);}
+.payout-figures .remaining.settled b{color:var(--success-dark);}
+.payout-pay-row{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;}
+.payout-pay-row input{width:180px;}
+.payout-history{font-size:12px;color:var(--muted);margin-top:8px;}
+
+/* ---- Cloud sync status badge ---- */
+.sync-badge{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--chrome-border);white-space:nowrap;font-weight:700;
+  max-width:38vw;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle;cursor:pointer;color:var(--chrome-muted);}
+@media (min-width:480px){ .sync-badge{max-width:220px;} }
+.sync-badge.on{color:#8CF3C6;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.14);}
+.sync-badge.off{color:#FBCB7C;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.14);}
+
+/* ---- Jalali date-select widget (year/month/day dropdowns) ---- */
+.jalali-date-selects{display:flex;gap:6px;}
+.jalali-date-selects select{padding:9px;font-size:13px;}
+.jalali-date-selects .jd-year{flex:1.3;}
+.jalali-date-selects .jd-month{flex:1.6;}
+.jalali-date-selects .jd-day{flex:1;}
+
+/* ---- Money inputs (text-based, thousands separator) ---- */
+input.money-input{direction:ltr;text-align:right;font-variant-numeric:tabular-nums;}
+/* Isolates formatted money numbers from surrounding RTL text so digit groups and
+   thousand separators never visually reorder/scatter (see fmtMoney in app.js). */
+.money-num{unicode-bidi:isolate;direction:ltr;overflow-wrap:break-word;word-break:break-word;}
+.stat-card .num{unicode-bidi:isolate;}
+.amount{unicode-bidi:isolate;}
+
+/* ---- Pending match cards ---- */
+.pending-card .modal-actions{margin-top:12px;justify-content:flex-start;}
+
+/* ---- Lead follow-up status ---- */
+.followup-row{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.followup-row label{flex-direction:row;align-items:center;gap:6px;margin:0;font-size:12px;color:var(--muted);flex:1;font-weight:600;}
+.followup-select{width:auto;flex:1;padding:10px;font-size:13px;min-height:40px;}
+.chip.followup-awaiting_visit{color:var(--muted);border-color:var(--border-strong);background:var(--surface-2);}
+.chip.followup-in_progress{color:var(--info-dark);border-color:rgba(var(--info-rgb),.3);background:var(--info-tint);}
+.chip.followup-incomplete_docs{color:var(--warn-dark);border-color:rgba(var(--warn-rgb),.3);background:var(--warn-tint);}
+.chip.followup-follow_up{color:var(--violet-dark);border-color:rgba(var(--violet-rgb),.3);background:var(--violet-tint);}
+.chip.followup-taken_by_other{color:var(--danger);border-color:rgba(var(--danger-rgb),.3);background:var(--danger-tint);}
+.chip.goods-chip{color:var(--warn-dark);border-color:rgba(var(--warn-rgb),.3);background:var(--warn-tint);}
+
+/* ---- Lead follow-up status categories/grouping ---- */
+.followup-group{margin-bottom:18px;}
+.followup-group-title{display:inline-block;margin-bottom:9px;font-weight:800;font-size:13.5px;}
+
+/* ---- Customer list grouping by processing stage (admin/processor panels) ---- */
+.customer-group{margin-bottom:18px;}
+.customer-group-title{display:inline-block;margin-bottom:9px;font-weight:800;font-size:13.5px;}
+
+/* ---- Settings page ---- */
+.settings-form{max-width:560px;}
+
+/* ---- Message templates (preset descriptions) ---- */
+.template-preview-text{font-size:13px;color:var(--text);margin-top:8px;white-space:pre-wrap;word-break:break-word;line-height:1.7;}
+.attachment-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.attachment-item{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:9px;}
+.attachment-item img{max-width:120px;max-height:120px;border-radius:10px;display:block;}
+.attachment-item audio{flex:1;}
+.chip.scope-shared{color:var(--success-dark);border-color:rgba(var(--success-rgb),.3);background:var(--success-tint);}
+.chip.scope-personal{color:var(--info-dark);border-color:rgba(var(--info-rgb),.3);background:var(--info-tint);}
+.send-quicklinks{display:flex;gap:8px;flex-wrap:wrap;}
+.send-quicklinks .btn{flex:1;min-width:130px;}
+#send-file-fallback{display:flex;gap:8px;flex-wrap:wrap;}
+#send-file-fallback a.btn{text-decoration:none;text-align:center;flex:1;min-width:130px;}
+
+/* ---- Customer processing-stage timeline (caller panel) ---- */
+.stage-timeline{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-strong);display:flex;flex-direction:column;gap:8px;}
+.stage-step{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;}
+.stage-step .stage-step-dot{width:10px;height:10px;min-width:10px;border-radius:50%;border:2px solid var(--border-strong);background:transparent;transition:background .2s,border-color .2s;}
+.stage-step.done .stage-step-dot{background:var(--success);border-color:var(--success);}
+.stage-step.current .stage-step-dot{background:var(--warn);border-color:var(--warn);box-shadow:0 0 0 4px rgba(var(--warn-rgb),.2);}
+.stage-step.done .stage-step-label{color:var(--success-dark);}
+.stage-step.current .stage-step-label{color:var(--warn-dark);font-weight:800;}
+.stage-step.future .stage-step-label{color:var(--muted);}
+
+/* ---- Per-customer reminder ---- */
+.card-actions{margin-top:12px;display:flex;justify-content:flex-start;gap:8px;flex-wrap:wrap;}
+.chip.reminder-chip{color:var(--info-dark);border-color:rgba(var(--info-rgb),.3);background:var(--info-tint);}
+.chip.reminder-chip.reminder-due{color:var(--danger);border-color:rgba(var(--danger-rgb),.3);background:var(--danger-tint);}
+
+/* ---- Uploaded-image lightbox (images are hidden by default, shown via a button) ---- */
+.image-lightbox-overlay{position:fixed;inset:0;z-index:80;background:rgba(8,11,22,.9);display:flex;align-items:center;justify-content:center;padding:24px;}
+.image-lightbox-box{position:relative;max-width:min(92vw,720px);max-height:90vh;}
+.image-lightbox-box img{display:block;max-width:100%;max-height:90vh;border-radius:14px;object-fit:contain;box-shadow:var(--shadow-lg);}
+.image-lightbox-close{position:absolute;top:-14px;left:-14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);cursor:pointer;font-size:14px;line-height:1;box-shadow:var(--shadow-md);}
+.image-lightbox-close:hover{border-color:var(--danger);color:var(--danger);}
+
+/* ---- Topbar today's-reminders bell icon ---- */
+.reminder-bell-btn{position:relative;}
+.reminder-bell-btn.has-due{animation:reminder-bell-pulse 1.6s ease-in-out infinite;}
+.reminder-bell-badge{
+  position:absolute;top:2px;left:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;
+  background:var(--danger);color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center;
+  unicode-bidi:isolate;box-shadow:0 0 0 2px var(--navy-900);
+}
+@keyframes reminder-bell-pulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.15);}
+}
+
+/* ---- Group chat (Telegram-inspired: day dividers, grouped bubbles, colored avatars) ---- */
+.chat-page{display:flex;flex-direction:column;height:calc(100vh - 150px);height:calc(100dvh - 150px);}
+.chat-messages{
+  flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:14px 10px;
+  background:
+    radial-gradient(circle at 14% 6%, rgba(var(--brand-rgb),.05), transparent 45%),
+    radial-gradient(circle at 88% 94%, rgba(var(--gold-rgb),.06), transparent 45%),
+    var(--surface-2);
+  border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;
+}
+
+/* Sticky-feeling centered date pill separating each day's messages */
+.chat-day-divider{display:flex;align-items:center;justify-content:center;margin:16px 0 12px;}
+.chat-day-divider:first-child{margin-top:2px;}
+.chat-day-divider span{
+  background:var(--surface-3);color:var(--muted);font-size:11px;font-weight:700;
+  padding:5px 15px;border-radius:999px;box-shadow:var(--shadow-xs);
+}
+
+/* One row = avatar + bubble. Consecutive messages from the same sender are visually
+   clustered: only the first row in a cluster shows the avatar/name, later rows show
+   a hidden spacer instead so bubbles stay aligned without repeating the header. */
+.chat-row{display:flex;align-items:flex-end;gap:8px;max-width:100%;margin-top:2px;}
+.chat-row.group-start{margin-top:12px;}
+.chat-row.mine{flex-direction:row-reverse;align-self:flex-end;}
+
+.chat-avatar{
+  width:28px;height:28px;border-radius:50%;flex:0 0 28px;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11.5px;font-weight:800;margin-bottom:3px;box-shadow:var(--shadow-xs);
+}
+.chat-avatar.spacer{visibility:hidden;}
+
+.chat-bubble{
+  max-width:76%;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:8px 12px 6px;position:relative;box-shadow:var(--shadow-xs);
+}
+.chat-bubble.group-start{border-top-right-radius:5px;}
+.chat-row.mine .chat-bubble{background:var(--brand-100);border-color:rgba(var(--brand-rgb),.22);}
+.chat-row.mine .chat-bubble.group-start{border-top-right-radius:16px;border-top-left-radius:5px;}
+
+.chat-bubble-meta{font-size:11.5px;font-weight:800;margin-bottom:3px;}
+.chat-bubble-meta .role-tag{font-weight:600;color:var(--muted);margin-inline-start:3px;}
+.chat-bubble-text{font-size:14px;white-space:pre-wrap;word-break:break-word;line-height:1.55;}
+.chat-bubble-foot{display:flex;justify-content:flex-start;margin-top:2px;}
+.chat-bubble-time{font-size:10.5px;color:var(--muted);}
+
+.chat-delete-btn{
+  position:absolute;top:2px;left:2px;background:transparent;border:none;color:var(--muted);
+  cursor:pointer;font-size:12px;padding:3px 5px;line-height:1;border-radius:8px;
+  opacity:0;transition:opacity .15s,background .15s,color .15s;
+}
+.chat-bubble:hover .chat-delete-btn,.chat-delete-btn:focus-visible{opacity:1;}
+/* Invisible touch-target expansion (~32x32px effective) without growing the visible glyph. */
+.chat-delete-btn::before{content:"";position:absolute;inset:-10px;}
+.chat-delete-btn:hover{color:var(--danger);background:rgba(var(--danger-rgb),.08);}
+/* Touch devices have no :hover, so keep the delete control faintly visible instead of hidden. */
+@media (hover:none){.chat-delete-btn{opacity:.5;}}
+
+.chat-input-row{display:flex;gap:8px;align-items:center;}
+.chat-input-row input{flex:1;border-radius:999px;background:var(--surface-2);}
+.chat-input-row .btn{
+  flex:0 0 44px;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.chat-input-row .btn svg{width:19px;height:19px;transform:scaleX(-1);}
+
+/* =========================================================================
+   Mobile-first refinements (< 720px)
+   ========================================================================= */
+@media (max-width:720px){
+  .main-content{padding:14px 12px calc(24px + var(--safe-b));}
+  h2{font-size:18px;}
+
+  /* iOS Safari auto-zooms the page on focus of any input under 16px — this is the
+     single most common thing that makes a web app feel "not native" on iPhone. */
+  input,select,textarea{font-size:16px;padding:12px 14px;}
+  .formula-input{font-size:16px;}
+  .btn{min-height:44px;}
+
+  /* Stat cards: a clean 2-column grid that fits the screen fully, no bleed
+     past either edge. (The earlier horizontal-scroll version cut cards off
+     at both edges with no visible "swipe me" affordance, which just read
+     as broken layout rather than an intentional carousel.) */
+  .stat-row{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;
+  }
+  .stat-card{min-width:0;padding:14px;}
+  .stat-card:last-child:nth-child(odd){grid-column:1 / -1;}
+  .stat-card .num{font-size:clamp(15px,9cqw,22px);}
+  .stat-card .label{font-size:11.5px;line-height:1.4;}
+
+  /* Filter selects: stacked one-per-row like a native settings list, instead of
+     a horizontally-scrolling strip that spilled past the screen edge. */
+  .filter-row{flex-direction:column;flex-wrap:nowrap;overflow-x:visible;padding-bottom:0;}
+  .filter-row > *{width:100%;min-width:0;}
+
+  /* Primary "add" actions become a floating, thumb-friendly button */
+  .page-head{margin-bottom:14px;}
+  .page-head button[id^="btn-add"]{
+    position:fixed;right:16px;left:16px;bottom:calc(16px + var(--bottom-nav-h) + var(--safe-b));z-index:35;
+    border-radius:16px;padding:15px 16px;font-size:15px;
+  }
+  .page{padding-bottom:calc(78px + var(--bottom-nav-h));}
+  .toast-root{bottom:calc(84px + var(--bottom-nav-h) + var(--safe-b));}
+  .chat-page{height:calc(100vh - 150px - var(--bottom-nav-h));height:calc(100dvh - 150px - var(--bottom-nav-h));}
+
+  .card{padding:14px;}
+  .form-grid{grid-template-columns:1fr;}
+  .report-controls{flex-direction:column;align-items:stretch;}
+  .report-controls label{min-width:0;}
+  .payout-pay-row input{width:100%;}
+  .send-quicklinks .btn{min-width:0;}
+}
+
+/* =========================================================================
+   Desktop refinement (>= 1080px): the sidebar docks permanently instead of
+   sliding over the content, since office/admin staff run this on a laptop
+   as often as on a phone. Pure presentation — openSidebar()/closeSidebar()
+   in app.js still run exactly as before, they just stop mattering visually
+   at this width because the rules below win.
+   ========================================================================= */
+@media (min-width:721px) and (max-width:1079px){
+  /* Tablet-ish widths: bottom nav is visible but the add button isn't floating
+     here (that only kicks in at <=720px above), so just clear the bar itself. */
+  .main-content{padding-bottom:calc(28px + var(--bottom-nav-h) + var(--safe-b));}
+  .toast-root{bottom:calc(16px + var(--bottom-nav-h) + var(--safe-b));}
+  .chat-page{height:calc(100vh - 150px - var(--bottom-nav-h));height:calc(100dvh - 150px - var(--bottom-nav-h));}
+}
+@media (min-width:1080px){
+  /* The gap-on-scroll bug was because .topbar used position:sticky while
+     .sidebar used position:fixed - two different mechanisms that are
+     each viewport-anchored on their own, but rely on the browser keeping
+     them lined up. In practice the topbar's sticky was scrolling away
+     with the page instead of pinning, so the (still correctly fixed)
+     sidebar was left looking "detached" with blank space above it once
+     the user scrolled down. Making the topbar (and the connection banner
+     above it) truly position:fixed too removes that dependency entirely -
+     everything in the header is now anchored to the viewport the same
+     way, so nothing can ever drift apart while scrolling. */
+  .connection-banner{position:fixed;top:0;left:0;right:0;z-index:91;}
+  .topbar{position:fixed;top:var(--banner-h,0px);left:0;right:0;z-index:20;padding-inline:28px;}
+  #btn-menu{display:none;}
+  .bottom-nav{display:none;}
+  .sidebar{
+    /* --header-h is the live combined height of the banner + topbar,
+       kept in sync via JS (see syncHeaderHeight in app.js), so the
+       sidebar's top offset always matches the real header, never a
+       hardcoded guess. */
+    transform:none;top:var(--header-h,76px);bottom:0;box-shadow:none;
+    border-left:1px solid var(--chrome-border);padding:26px 16px 18px;
+  }
+  .sidebar-close-btn{display:none;}
+  .sidebar-overlay{display:none !important;}
+  /* Topbar is now position:fixed (removed from normal flow), so
+     main-content needs its own top offset to avoid sliding under it -
+     sticky used to reserve that space automatically, fixed doesn't. */
+  .main-content{margin:var(--header-h,76px) 280px 0 0;max-width:1040px;padding:32px 40px calc(40px + var(--safe-b));}
+}
+
+/* ===================== Audit Log / Pagination / Analytics ===================== */
+.audit-table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:14px;}
+.audit-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px;}
+.audit-table th{text-align:right;padding:10px 12px;background:var(--surface-2);color:var(--muted);font-weight:700;border-bottom:1px solid var(--border);position:sticky;top:0;}
+.audit-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+.audit-table tr:last-child td{border-bottom:none;}
+.audit-time-cell{white-space:nowrap;}
+.audit-action-chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:var(--brand-100);color:var(--brand-700);}
+.audit-action-chip.danger{background:var(--danger-tint);color:var(--danger-dark);}
+.audit-action-chip.warn{background:var(--warn-tint);color:var(--warn-dark);}
+
+.pagination-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 0 4px;}
+.pagination-bar button{padding:7px 14px;border-radius:10px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text);cursor:pointer;font-size:13.5px;transition:border-color .15s,background .15s;}
+.pagination-bar button:hover:not(:disabled){border-color:var(--brand);background:var(--brand-100);}
+.pagination-bar button:disabled{opacity:.4;cursor:default;}
+.pagination-bar span{color:var(--muted);font-size:13.5px;}
+
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;}
+.analytics-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);}
+.analytics-card h3{margin:0 0 10px;font-size:14.5px;color:var(--text);}
+.analytics-card canvas{max-width:100%;}
+@media (max-width:860px){ .analytics-grid{grid-template-columns:1fr;} }
+
+/* =========================================================================
+   ===================== LOAN PRODUCTS & CALCULATOR =======================
+   ========================================================================= */
+
+/* کد درون‌خطی در توضیحات فرمول‌نویسی - برای خوانایی بهتر */
+.modal-form code, .loan-form-section code, .loan-hint code{
+  background:var(--navy-900);padding:2px 7px;border-radius:6px;font-family:"JetBrains Mono","Sarasa Mono SC","Consolas",monospace;
+  font-size:12.5px;color:var(--gold-light);direction:ltr;display:inline-block;unicode-bidi:isolate;
+  font-weight:500;
+}
+.formula-input{
+  direction:ltr;text-align:left;font-family:"JetBrains Mono","Sarasa Mono SC","Consolas",monospace;font-size:13px;
+  font-variant-numeric:tabular-nums;background:var(--surface);color:var(--brand-700);
+}
+
+/* ---- صفحه مدیریت محصولات (کارت‌های گرافیکی) ---- */
+.loan-product-card{padding:16px;}
+.loan-product-card .card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.loan-product-card .card-meta .chip{font-size:11.5px;padding:4px 11px;}
+.chip-ok{color:var(--success-dark);background:var(--success-tint);border-color:rgba(var(--success-rgb),.3);}
+.chip-err{color:var(--danger);background:var(--danger-tint);border-color:rgba(var(--danger-rgb),.3);}
+.chip-archived{color:var(--warn-dark);background:var(--warn-tint);border-color:rgba(var(--warn-rgb),.3);}
+.loan-product-desc{
+  font-size:13px;color:var(--text);margin-top:10px;line-height:1.7;
+  white-space:pre-wrap;word-break:break-word;
+}
+.loan-product-actions{
+  display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-strong);
+  flex-wrap:wrap;
+}
+.loan-product-actions .btn{padding:7px 14px;font-size:12.5px;}
+
+/* ---- فرم محصول وام ---- */
+.loan-form-section{margin-bottom:18px;}
+.loan-form-section h4{
+  margin:0 0 10px;font-size:14.5px;font-weight:800;color:var(--ink);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.loan-hint{
+  font-size:11.5px;color:var(--muted);font-weight:500;
+}
+.loan-hint code{font-size:11px;}
+
+/* راهنمای فرمول‌نویسی (قابل جمع‌شدن) */
+.loan-formula-guide{
+  margin-bottom:14px;border:1px solid var(--border);border-radius:12px;
+  background:var(--surface-2);overflow:hidden;
+}
+.loan-formula-guide summary{
+  cursor:pointer;padding:10px 14px;font-size:13px;font-weight:700;color:var(--brand-700);
+  user-select:none;list-style:none;
+}
+.loan-formula-guide summary::-webkit-details-marker{display:none;}
+.loan-formula-guide summary::before{content:"▸ ";display:inline-block;transition:transform .15s ease;}
+.loan-formula-guide[open] summary::before{transform:rotate(90deg);}
+.loan-formula-guide-body{
+  padding:0 14px 12px;font-size:12.5px;color:var(--text);line-height:1.8;
+}
+.loan-formula-vars, .loan-formula-extras{
+  display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-bottom:8px;
+}
+.loan-formula-extras{grid-template-columns:1fr;}
+.loan-formula-examples{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;margin:8px 0;line-height:2;
+}
+.loan-formula-constants-hint{color:var(--muted);}
+@media (max-width:480px){
+  .loan-formula-vars, .loan-formula-extras{grid-template-columns:1fr;}
+}
+
+.loan-constants-list, .loan-special-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.loan-const-row, .loan-special-row{
+  display:grid;gap:8px;align-items:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;
+}
+.loan-const-row{grid-template-columns:1fr 1.3fr 0.7fr auto;}
+.loan-special-row{grid-template-columns:0.5fr 1fr 1.5fr auto;}
+.loan-const-row input, .loan-special-row input{margin:0;padding:9px 11px;font-size:13px;}
+.loan-const-row .btn, .loan-special-row .btn{padding:9px 12px;}
+@media (max-width:640px){
+  .loan-const-row, .loan-special-row{grid-template-columns:1fr 1fr;}
+  .loan-const-row .btn, .loan-special-row .btn{grid-column:1/-1;width:fit-content;}
+}
+
+/* پیش‌نمایش زنده */
+.loan-preview-result{margin-top:10px;}
+.loan-preview-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:8px;
+}
+.loan-preview-cell{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;
+  display:flex;flex-direction:column;gap:4px;min-width:0;
+}
+.loan-preview-cell span{font-size:11.5px;color:var(--muted);font-weight:600;}
+.loan-preview-cell b{font-size:14.5px;color:var(--text);overflow-wrap:break-word;word-break:break-word;font-variant-numeric:tabular-nums;}
+.loan-preview-issues{
+  background:var(--warn-tint);border:1px solid rgba(var(--warn-rgb),.3);border-radius:10px;
+  padding:10px 12px;font-size:12.5px;color:var(--warn-dark);line-height:1.7;
+}
+
+/* ---- صفحه محاسبه وام ---- */
+.loan-calc-desc{margin-bottom:14px;}
+.loan-calc-desc-box{
+  background:var(--brand-100);border:1px solid rgba(var(--brand-rgb),.3);color:var(--brand-700);
+  padding:11px 14px;border-radius:var(--radius-sm);font-size:13px;line-height:1.7;
+}
+
+/* ردیف انتخاب حالت محاسبه (رادیوهای بزرگ) - بدون transition برای جلوگیری از پرش */
+.loan-calc-input-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;
+}
+.loan-calc-mode-opt{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:14px 12px;border:2px solid var(--border);border-radius:14px;
+  cursor:pointer;font-size:14px;font-weight:700;color:var(--muted);
+  background:var(--surface);min-height:56px;text-align:center;position:relative;
+  user-select:none;
+  /* بدون transition — تغییر حالت فوری است، نه پالس/پرش */
+}
+.loan-calc-mode-opt:hover{border-color:var(--border-strong);background:var(--surface-2);}
+.loan-calc-mode-opt input{
+  width:20px;height:20px;accent-color:var(--brand);flex:none;cursor:pointer;
+  /* جلوگیری از اسکرول خودکار مرورگر هنگام focus روی رادیو */
+  position:relative;
+}
+.loan-calc-mode-opt input:focus{outline:none;}
+.loan-calc-mode-opt input:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px;}
+.loan-calc-mode-opt:has(input:checked){
+  border-color:var(--brand);background:var(--brand-100);color:var(--brand-700);
+  /* بدون box-shadow — باعث پالس بصری می‌شد */
+}
+@media (max-width:480px){
+  .loan-calc-input-row{grid-template-columns:1fr;}
+}
+
+/* label مبلغ: ارتفاع ثابت و nowrap برای جلوگیری از پرش هنگام تغییر متن */
+#loan-calc-amount-wrap{min-height:70px;}
+#loan-calc-amount-label{white-space:nowrap;}
+
+/* #loan-calc-result: وقتی خالی است فضایی اشغال نمی‌کند */
+#loan-calc-result:empty{margin:0;padding:0;}
+
+/* ---- نتیجه محاسبه (کارت‌های گرافیکی) ---- */
+.loan-result{margin-top:18px;}
+.loan-result-head{margin-bottom:14px;}
+.loan-result-head h3{font-size:17px;margin-bottom:2px;}
+.loan-result-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:8px;
+}
+.loan-result-cell{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow-xs);min-width:0;
+}
+.loan-result-cell .label{font-size:12px;color:var(--muted);font-weight:600;}
+.loan-result-cell b{font-size:16px;color:var(--text);overflow-wrap:break-word;word-break:break-word;font-variant-numeric:tabular-nums;}
+.loan-result-cell.highlight{
+  background:linear-gradient(135deg,#FBF3E1,#FDF8ED);
+  border-color:rgba(var(--gold-rgb),.4);
+}
+.loan-result-cell.highlight b{color:var(--gold-dark);}
+
+/* جدول اقساط */
+.loan-schedule-wrap{overflow-x:auto;border-radius:14px;}
+.loan-schedule-table .row-first td{background:rgba(var(--info-rgb),.05);}
+.loan-schedule-table .row-special td{background:var(--violet-tint);}
+.loan-schedule-table td.amount{font-variant-numeric:tabular-nums;}
+.loan-schedule-table th,.loan-schedule-table td{text-align:center;}
+
+@media (max-width:720px){
+  .loan-result-grid{grid-template-columns:1fr 1fr;}
+  .loan-result-cell b{font-size:14.5px;}
+
+  /* Installment table: this one only ever has 3 truly useful columns on a
+     phone (شماره قسط / نوع / مبلغ) - "دسته" just repeats what the row color
+     and the نوع label already say - so drop it and let the table shrink to
+     its own content instead of forcing the 640px audit-table min-width that
+     was causing a permanent left-scroll. */
+  .loan-schedule-table{min-width:0;table-layout:fixed;width:100%;}
+  .loan-schedule-table th:nth-child(4),
+  .loan-schedule-table td:nth-child(4){display:none;}
+  .loan-schedule-table th,.loan-schedule-table td{padding:9px 6px;font-size:12.5px;}
+  /* Explicit widths, not auto: with auto layout the "شماره قسط" HEADER LABEL
+     (9 characters) - not its actual 1-2 digit content - was what forced that
+     column wide, leaving too little room for the amount column once amounts
+     reach into the billions (many digits). Column 1 only ever holds a short
+     number, column 2 a short label, so both get just enough room and column
+     3 (مبلغ) gets the rest - the column that actually needs it. */
+  .loan-schedule-table th:nth-child(1), .loan-schedule-table td:nth-child(1){width:22%;}
+  .loan-schedule-table th:nth-child(2), .loan-schedule-table td:nth-child(2){width:28%;}
+  .loan-schedule-table th:nth-child(3), .loan-schedule-table td:nth-child(3){width:50%;}
+  /* Fixed layout means the column can't just grow to fit "شماره قسط" anymore,
+     so let that header label wrap to two lines instead of forcing width. The
+     actual data cells (numbers/labels/amounts) stay single-line - wrapping a
+     number mid-digit would be far worse than a two-line header. */
+  .loan-schedule-table th{white-space:normal;line-height:1.3;}
+  .loan-schedule-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+}
+
+/* =========================================================================
+   Accessibility / quality floor
+   ========================================================================= */
+a:focus-visible, button:focus-visible, .btn:focus-visible, .icon-btn:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
+  outline:2.5px solid var(--brand);outline-offset:2px;border-radius:6px;
+}
+.nav-list li a:focus-visible{outline-color:var(--gold-light);}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  .brand-logo{animation:none;}
+  .reminder-bell-btn.has-due{animation:none;}
+}
+
+@media print{
+  .topbar,.sidebar,.sidebar-overlay,.toast-root,.connection-banner,.page-head button[id^="btn-add"]{display:none !important;}
+}
